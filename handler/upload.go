@@ -1,58 +1,66 @@
 package handler
 
 import (
-	"encoding/json"
-	"fmt"
+	"imgupload/conf/server"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path"
+	"strconv"
 	"strings"
+	"time"
 )
 
-type configuration struct {
-	Port     string
-	FilePath string
-}
+var conf = server.Conf
 
 //处理文件上传
 func UploadHandler(w http.ResponseWriter, r *http.Request) {
-	file, _ := os.Open("server.json")
-	defer file.Close()
-	decoder := json.NewDecoder(file)
-	conf := configuration{}
-	err := decoder.Decode(&conf)
-	if err != nil {
-		fmt.Println("Error:", err)
+
+	access := r.Header.Get("access")
+	if access != conf.Auth {
+		w.Write([]byte("Illegal request"))
 		return
 	}
+	// 只接受POST请求
 	if r.Method == http.MethodPost {
 		r.ParseForm()
-		//接收文件流及存储到本地目录
-		file, head, err := r.FormFile("file")
+
+		file, _, err := r.FormFile("file")
 		if err != nil {
-			fmt.Printf("Failed to get data,err:%s\n", err.Error())
+			log.Printf("Failed to get data,err:%s\n", err.Error())
 			return
 		}
 		defer file.Close()
 
-		fileName := head.Filename
-		split := strings.Split(fileName, "-")
-		filePath := conf.FilePath + "/" + strings.Join(split, "/")
+		now := time.Now()
+		createTime := now.Format("2006-01-02")
+
+		// 以时间为策略创建文件名
+		dir := strings.Split(createTime, "-")
+		fileName := strings.Join(dir, "/") + "/" + strconv.Itoa(int(time.Now().Unix())) + ".png"
+		filePath := conf.FilePath + "/" + fileName
 		err = os.MkdirAll(path.Dir(filePath), 0755)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			return
 		}
 
-		location := filePath
-
-		newFile, err := os.Create(location)
+		newFile, err := os.Create(filePath)
 		if err != nil {
-			fmt.Printf("Failed to create file,err:%s\n", err.Error())
+			log.Printf("Failed to create file,err:%s\n", err.Error())
 			return
 		}
 		defer newFile.Close()
-		io.Copy(newFile, file)
+		_, err = io.Copy(newFile, file)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		log.Println("上传成功: " + filePath)
+		w.Write([]byte("/img/" + fileName))
+	} else {
+		w.Write([]byte("Illegal request"))
 	}
 }

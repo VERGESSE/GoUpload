@@ -127,7 +127,7 @@ func ReadClipboard() (*bytes.Buffer, error) {
 		iSizeImage := h2.iHeight * ((h2.iWidth*uint32(h2.iBitCount)/8 + 3) &^ 3)
 		dataSize += iSizeImage
 	}
-	log.Println("datasize: ", dataSize, h2.iHeight*((h2.iWidth*uint32(h2.iBitCount)/8+3)&^3))
+	//log.Println("datasize: ", dataSize, h2.iHeight*((h2.iWidth*uint32(h2.iBitCount)/8+3)&^3))
 	// data := make([]byte, dataSize)
 
 	// var hdr *fileHeader
@@ -138,7 +138,7 @@ func ReadClipboard() (*bytes.Buffer, error) {
 	binary.Write(data, binary.LittleEndian, uint32(0))
 	const sizeof_colorbar = 0
 	binary.Write(data, binary.LittleEndian, uint32(fileHeaderLen+infoHeaderLen+sizeof_colorbar))
-	log.Println("fileHeader ", data.Bytes(), len(data.Bytes()))
+	//log.Println("fileHeader ", data.Bytes(), len(data.Bytes()))
 
 	// log.Println("header: ", hdr, data[:8])
 	// log.Print("bfOffBits ", hdr.bfOffBits)

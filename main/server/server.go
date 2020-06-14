@@ -1,32 +1,31 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-	"imgupload/handler"
+	"log"
 	"net/http"
-	"os"
+
+	"imgupload/conf/server"
+	"imgupload/handler"
+	"imgupload/util"
 )
 
-type configuration struct {
-	Port 		string
-	FilePath    string
-}
-
 func main() {
-	file, _ := os.Open("server.json")
-	defer file.Close()
-	decoder  := json.NewDecoder(file)
-	conf := configuration{}
-	err := decoder.Decode(&conf)
+
+	//设置log级别
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+
+	// 读取配置文件
+	conf := server.Conf
+	err := util.LoadConf("conf/server.json", conf)
 	if err != nil {
-		fmt.Println("Error:", err)
+		log.Println("Error: " , err)
 		return
 	}
+
+	//静态资源访问
+	http.Handle("/img/", http.StripPrefix("/img/", http.FileServer(http.Dir(conf.FilePath))))
 	// 文件操作接口
-	http.HandleFunc("/file/upload", handler.UploadHandler)
-	err = http.ListenAndServe(conf.Port, nil)
-	if err != nil {
-		fmt.Printf("Failed to start server,err:%s", err.Error())
-	}
+	http.HandleFunc("/figureBed/upload", handler.UploadHandler)
+	log.Fatal(http.ListenAndServe(conf.Port, nil))
 }
+

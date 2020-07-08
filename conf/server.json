@@ -1,5 +1,5 @@
 {
-  "port": ":8010",
+  "port": ":8600",
   "filePath": "images",
-  "Auth": "root"
+  "Auth": "vergessen"
 }

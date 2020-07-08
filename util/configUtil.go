@@ -2,15 +2,16 @@ package util
 
 import (
 	"encoding/json"
-	"os"
+	"io/ioutil"
 )
 
 // 读取配置文件方法
 func LoadConf(path string, conf interface{}) error {
-	file, _ := os.Open(path)
-	defer file.Close()
-	decoder := json.NewDecoder(file)
-	err := decoder.Decode(conf)
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(data, conf)
 	if err != nil {
 		return err
 	}

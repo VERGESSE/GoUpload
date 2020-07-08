@@ -2,6 +2,7 @@ package handler
 
 import (
 	"imgupload/conf/server"
+	"imgupload/util"
 	"io"
 	"log"
 	"net/http"
@@ -18,7 +19,7 @@ var conf = server.Conf
 func UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	access := r.Header.Get("access")
-	if access != conf.Auth {
+	if access != util.Sha2(conf.Auth) {
 		w.Write([]byte("Illegal request"))
 		return
 	}
@@ -27,18 +28,19 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		r.ParseForm()
 
 		file, _, err := r.FormFile("file")
+		group := r.FormValue("group")
 		if err != nil {
 			log.Printf("Failed to get data,err:%s\n", err.Error())
 			return
 		}
 		defer file.Close()
-
 		now := time.Now()
-		createTime := now.Format("2006-01-02")
+		createTime := now.Format("2006-0102")
 
 		// 以时间为策略创建文件名
 		dir := strings.Split(createTime, "-")
-		fileName := strings.Join(dir, "/") + "/" + strconv.Itoa(int(time.Now().Unix())) + ".png"
+		fileName := group + "/" + strings.Join(dir, "/") + "/" +
+			strconv.Itoa(int(time.Now().Unix())) + ".png"
 		filePath := conf.FilePath + "/" + fileName
 		err = os.MkdirAll(path.Dir(filePath), 0755)
 		if err != nil {

@@ -8,4 +8,8 @@ type Config struct {
 	ServerUrl string
 	// 权限
 	Auth string
+	// 分组
+	Groups []struct {
+		GroupName, ShortcutKey string
+	}
 }

@@ -1,5 +1,14 @@
 {
-  "serverUrl": "http://127.0.0.1:8010",
-  "serverImgUrl": "https://127.0.0.1/image",
-  "auth": "root"
+  "serverUrl": "http://127.0.0.1:8600",
+  "auth": "vergessen",
+  "groups": [
+    {
+      "groupName": "blog",
+      "shortcutKey": "ctrl+shift+z"
+    },
+    {
+      "groupName": "default",
+      "shortcutKey": "ctrl+shift+x"
+    }
+  ]
 }

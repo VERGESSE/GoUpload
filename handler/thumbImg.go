@@ -54,9 +54,9 @@ func ThumbImgHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		log.Println("图片剪裁完成: " + thumbImgPath)
-		thumbImgPath = "/img" + strings.TrimPrefix(thumbImgPath, conf.FilePath)
+		thumbImgPath = "/imgGo" + strings.TrimPrefix(thumbImgPath, conf.FilePath)
 		w.Write([]byte(thumbImgPath))
 	} else {
-		w.Write([]byte("Illegal request"))
+		w.Write([]byte("Request Must Be Post"))
 	}
 }

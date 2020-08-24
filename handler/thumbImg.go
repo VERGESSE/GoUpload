@@ -43,6 +43,7 @@ func ThumbImgHandler(w http.ResponseWriter, r *http.Request) {
 		// 检验图片是否存在
 		img, err := os.Open(imgPath)
 		if err != nil {
+			log.Println(err)
 			w.Write([]byte(NOTFOUNT))
 			return
 		}
@@ -50,6 +51,7 @@ func ThumbImgHandler(w http.ResponseWriter, r *http.Request) {
 		// 开始剪裁
 		thumbImgPath, err := util.ThumbImage(imgPath, pixel)
 		if err != nil {
+			log.Println(err)
 			w.Write([]byte(THUMBERR))
 			return
 		}

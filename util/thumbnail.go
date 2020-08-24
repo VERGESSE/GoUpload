@@ -11,7 +11,9 @@ import (
 	"fmt"
 	"image"
 	"image/jpeg"
+	_ "image/png"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -51,6 +53,7 @@ func Image(src image.Image, pixel int) image.Image {
 func ImageStream(w io.Writer, r io.Reader, pixel int) error {
 	src, _, err := image.Decode(r)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 	dst := Image(src, pixel)

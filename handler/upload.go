@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"imgupload/conf/server"
 	"imgupload/util"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -17,7 +19,7 @@ var conf = server.Conf
 
 //处理文件上传
 func UploadHandler(w http.ResponseWriter, r *http.Request) {
-
+	fmt.Println("11111111")
 	access := r.Header.Get("access")
 	if access != util.Sha2(conf.Auth) {
 		w.Write([]byte("Illegal request"))
@@ -40,7 +42,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		// 以时间为策略创建文件名
 		dir := strings.Split(createTime, "-")
 		fileName := group + "/" + strings.Join(dir, "/") + "/" +
-			strconv.Itoa(int(time.Now().Unix())) + ".png"
+			getId() + ".png"
 		filePath := conf.FilePath + "/" + fileName
 		err = os.MkdirAll(path.Dir(filePath), 0755)
 		if err != nil {
@@ -93,4 +95,19 @@ func DeleteImgHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.Write([]byte("Request Must Be Post"))
 	}
+}
+
+func init() {
+
+}
+
+// 解决高并发下图片覆盖问题，每毫秒仅允许生成一个Id
+var lock sync.Mutex
+
+func getId() string {
+	lock.Lock()
+	defer lock.Unlock()
+	id := strconv.Itoa(int(time.Now().UnixNano() / 1000))
+	time.Sleep(time.Microsecond)
+	return id
 }

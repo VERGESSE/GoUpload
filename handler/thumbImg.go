@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// 错误状态码
 const (
 	NOTFOUNT    = "1" // 请求路径图片不存在
 	THUMBERR    = "3" // 图片剪裁失败
@@ -38,6 +39,7 @@ func ThumbImgHandler(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(NOTFOUNT))
 			return
 		}
+		// 解析图片地址
 		imgPath = conf.FilePath + "/" +
 			strings.Join(pathSlice[len(pathSlice)-4:], "/")
 		// 检验图片是否存在

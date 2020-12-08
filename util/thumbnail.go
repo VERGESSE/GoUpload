@@ -1,10 +1,3 @@
-// Copyright © 2016 Alan A. A. Donovan & Brian W. Kernighan.
-// License: https://creativecommons.org/licenses/by-nc-sa/4.0/
-
-// See page 234.
-
-// The thumbnail package produces thumbnail-size images from
-// larger images.  Only JPEG images are currently supported.
 package util
 
 import (
@@ -21,10 +14,9 @@ import (
 	"strings"
 )
 
-// 取自《Go程序设计语言》第八章
-// Image returns a thumbnail-size version of src.
+// 将给定的输入流按照 pixel 进行剪裁 并返回新的输入流
 func Image(src image.Image, pixel int) image.Image {
-	// Compute thumbnail size, preserving aspect ratio.
+	// 获取按 pixel 剪裁后新图片的长宽
 	xs := src.Bounds().Size().X
 	ys := src.Bounds().Size().Y
 	width, height := pixel, pixel
@@ -38,9 +30,10 @@ func Image(src image.Image, pixel int) image.Image {
 
 	dst := image.NewRGBA(image.Rect(0, 0, width, height))
 
-	// a very crude scaling algorithm
+	// 读取每个像素进行压缩
 	for x := 0; x < width; x++ {
 		for y := 0; y < height; y++ {
+			// 获取压缩后图片 x y 位置的原图片的对应像素,进行填充
 			srcx := int(float64(x) * xscale)
 			srcy := int(float64(y) * yscale)
 			dst.Set(x, y, src.At(srcx, srcy))
@@ -49,20 +42,22 @@ func Image(src image.Image, pixel int) image.Image {
 	return dst
 }
 
-// ImageStream reads an image from r and
-// writes a thumbnail-size version of it to w.
+// 从 r 中读取图片数据,并按 pixel 剪裁后 写入到 w 输出流中
 func ImageStream(w io.Writer, r io.Reader, pixel int) error {
+	// 将输入流按照图片进行编码 支持格式为 jpg png gif
 	src, _, err := image.Decode(r)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
+	// 根据输入生成剪裁后的图片流
 	dst := Image(src, pixel)
+	// 将图片流写入到输出流
 	return jpeg.Encode(w, dst, nil)
 }
 
-// ImageFile2 reads an image from infile and writes
-// a thumbnail-size version of it to outfile.
+// 创建 outfile 文件名的文件, 将 infile
+// 按 pixel 剪裁后写入到 outfile 中
 func ImageFile(outfile, infile string, pixel int) (err error) {
 	in, err := os.Open(infile)
 	if err != nil {
@@ -82,13 +77,15 @@ func ImageFile(outfile, infile string, pixel int) (err error) {
 	return out.Close()
 }
 
-// ImageFile reads an image from infile and writes
-// a thumbnail-size version of it in the same directory.
-// It returns the generated file name, e.g. "foo.thumb.jpeg".
+// 剪裁图片
+// infile 要剪裁的图片的本机地址
+// pixel 剪裁后的图片像素
 func ThumbImage(infile string, pixel int) (string, error) {
 	pixelsStr := strconv.Itoa(pixel)
 	suffix := "_" + pixelsStr + "x" + pixelsStr
-	ext := filepath.Ext(infile) // e.g., ".jpg", ".JPEG"
+	// 获取文件扩展名
+	ext := filepath.Ext(infile)
+	// 拼接剪裁后的文件名
 	outfile := strings.TrimSuffix(infile, ext) + suffix + ext
 	return outfile, ImageFile(outfile, infile, pixel)
 }

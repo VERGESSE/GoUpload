@@ -5,12 +5,10 @@ import (
 	"encoding/binary"
 	"io"
 
-	"syscall"
-	"unsafe"
-	// "bufio"
 	"golang.org/x/image/bmp"
 	"image/jpeg"
-	// "github.com/anthonynsimon/bild/imgio"
+	"syscall"
+	"unsafe"
 )
 
 const (
@@ -115,8 +113,6 @@ func ReadClipboard() (*bytes.Buffer, error) {
 		return nil, err
 	}
 
-	// var bin_buf bytes.Buffer
-	// hmif := new(infoHeader)
 	h2 := (*infoHeader)(unsafe.Pointer(pdata))
 
 	//	fmt.Println(h2)
@@ -126,37 +122,18 @@ func ReadClipboard() (*bytes.Buffer, error) {
 		iSizeImage := h2.iHeight * ((h2.iWidth*uint32(h2.iBitCount)/8 + 3) &^ 3)
 		dataSize += iSizeImage
 	}
-	//log.Println("datasize: ", dataSize, h2.iHeight*((h2.iWidth*uint32(h2.iBitCount)/8+3)&^3))
-	// data := make([]byte, dataSize)
 
-	// var hdr *fileHeader
 	data := new(bytes.Buffer)
-	// hdr := (*bytes.Buffer)(unsafe.Pointer(&data[0]))
 	binary.Write(data, binary.LittleEndian, uint16('B')|(uint16('M')<<8))
 	binary.Write(data, binary.LittleEndian, uint32(dataSize))
 	binary.Write(data, binary.LittleEndian, uint32(0))
 	const sizeof_colorbar = 0
 	binary.Write(data, binary.LittleEndian, uint32(fileHeaderLen+infoHeaderLen+sizeof_colorbar))
-	//log.Println("fileHeader ", data.Bytes(), len(data.Bytes()))
-
-	// log.Println("header: ", hdr, data[:8])
-	// log.Print("bfOffBits ", hdr.bfOffBits)
-	// copyInfoHdr(&data[fileHeaderLen], h2)
 	j := 0
 	for i := fileHeaderLen; i < int(dataSize); i++ {
 		binary.Write(data, binary.BigEndian, *(*byte)(unsafe.Pointer(pdata + uintptr(j))))
 		j++
 	}
-
-	for i := 0; i < 12; i++ {
-		// binary.Write(data, binary.BigEndian, byte(0))
-	}
-
-	//	fmt.Println(data.Bytes()[:60])
-	// fmt.Println(data.Bytes()[1196900:])
-
-	// // imgio.Save("goimg.png", data, imgio.PNG)
-	//SaveAs(data, filename)
 
 	return data, nil
 }

@@ -32,19 +32,25 @@ func main() {
 	showToast("程序启动成功")
 	// 根据配置的组别启动程序
 	for _, groupInfo := range conf.Groups  {
+		// 获取快捷键
 		keys := strings.Split(groupInfo.ShortcutKey, "+")
 		groupName := groupInfo.GroupName
-		robotgo.EventHook(hook.KeyDown, keys, func(e hook.Event) {
-			doUpload(groupName)
+		// 设置指定文件名和快捷键的监听
+		robotgo.EventHook(hook.KeyDown, keys,
+			func(e hook.Event) {
+				// 启动文件上传程序
+				doUpload(groupName)
 		})
 	}
 	log.Println("程序启动成功")
 	s := robotgo.EventStart()
+	// 阻塞程序, 使程序不主动退出
 	<-robotgo.EventProcess(s)
 	showToast("程序退出！")
 }
 
 func doUpload(group string) {
+	// 获取剪切板中的图片数据
 	fileData, err := clipboard.ReadClipboard()
 	if err != nil {
 		showToast("图片上传失败")
@@ -71,8 +77,10 @@ func doUpload(group string) {
 	uploadClient := http.Client{}
 	request, _ := http.NewRequest(http.MethodPost,
 		conf.ServerUrl+"/imgGo/upload", bodyBuf)
+	// 写入通行证
 	request.Header.Set("access", util.Sha2(conf.Auth))
 	request.Header.Set("Content-Type", contentType)
+	// 发起文件上传请求
 	resp, err := uploadClient.Do(request)
 	if err != nil {
 		log.Println(err)
@@ -88,11 +96,13 @@ func doUpload(group string) {
 		return
 	}
 	log.Println("上传成功" + respBytes.String())
+	// 向剪切板写入可访问文件路径
 	robotgo.WriteAll(conf.ServerUrl + respBytes.String())
 
 	showToast(group + ": 图片上传成功")
 }
 
+// win10的右下角通知器
 func showToast(message string) {
 	notification := toast.Notification{
 		Title:   "ImgGo",

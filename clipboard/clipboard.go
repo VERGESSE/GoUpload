@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"github.com/lxn/win"
+	"github.com/gonutz/w32"
 	"golang.org/x/image/bmp"
+	"golang.org/x/sys/windows"
 	"image/jpeg"
 	"io"
 	"log"
@@ -56,6 +57,7 @@ type FileInfo struct {
 	Img bool
 }
 
+// 声明 windows 系统调用的 api
 var (
 	user32                     = syscall.MustLoadDLL("user32")
 	openClipboard              = user32.MustFindProc("OpenClipboard")
@@ -72,6 +74,8 @@ var (
 	globalUnlock = kernel32.NewProc("GlobalUnlock")
 	lstrcpy      = kernel32.NewProc("lstrcpyW")
 	copyMemory   = kernel32.NewProc("CopyMemory")
+
+	dragQueryFile *windows.LazyProc
 )
 
 func CopyInfoHdr(dst *byte, psrc *infoHeader) (string, error) {
@@ -93,10 +97,12 @@ func CopyInfoHdr(dst *byte, psrc *infoHeader) (string, error) {
 	return "copy infoHeader success", nil
 }
 
+// 获取 byte 数组的额 uint16 地址
 func ReadUint16(b []byte) uint16 {
 	return uint16(b[0]) | uint16(b[1])<<8
 }
 
+// 获取 byte 数组的额 uint32 地址
 func ReadUint32(b []byte) uint32 {
 	return uint32(b[0]) | uint32(b[1])<<8 | uint32(b[2])<<16 | uint32(b[3])<<24
 }
@@ -108,28 +114,35 @@ func ReadClipboard() (*FileInfo, error) {
 		infoHeaderLen = 40
 	)
 
+	// 打开剪切板
 	r, _, err := openClipboard.Call(0)
 	if r == 0 {
 		return nil, err
 	}
 	defer closeClipboard.Call()
 
+	// 校验参数是否为 调色板 即截图类型
 	r, _, err = isClipboardFormatAvailable.Call(cfDib)
 	if r == 0 {
+		// 不是截图类型，尝试文件类型
 		return ReadClipboardFile()
 	}
 
+	// 获取剪切板中的数据
 	h, _, err := getClipboardData.Call(cfDib)
 	if r == 0 {
 		return nil, err
 	}
 
+	// 使用剪切板为调色板时需要上锁独占剪切板
 	pdata, _, err := globalLock.Call(h)
 	if pdata == 0 {
 		return nil, err
 	}
+	// 剪切板上锁后要记得释放锁
 	defer globalUnlock.Call(h)
 
+	// 获取调色板指针
 	h2 := (*infoHeader)(unsafe.Pointer(pdata))
 
 	//	fmt.Println(h2)
@@ -140,6 +153,7 @@ func ReadClipboard() (*FileInfo, error) {
 		dataSize += iSizeImage
 	}
 
+	// 解析调色板数据
 	data := new(bytes.Buffer)
 	binary.Write(data, binary.LittleEndian, uint16('B')|(uint16('M')<<8))
 	binary.Write(data, binary.LittleEndian, uint32(dataSize))
@@ -159,32 +173,29 @@ func ReadClipboard() (*FileInfo, error) {
 
 // 获取剪切板文件路径的数据流
 func ReadClipboardFile() (*FileInfo, error) {
+	// 因为剪切板已经打开 所以在这里直接验证剪切板数据是否为文件类型
 	r, _, err := isClipboardFormatAvailable.Call(cFHDROP)
 	if r == 0 {
 		log.Println(err)
 		return nil, err
 	}
 
+	// 获取剪切板数据
 	h, _, err := getClipboardData.Call(cFHDROP)
 	if r == 0 {
 		return nil, err
 	}
 
 	// 获取剪切板数据指针
-	h2 := (win.HDROP)(unsafe.Pointer(h))
-	// 获取文件路径
-	var filePath0 = make([]uint16, 1000)
+	h2 := (w32.HDROP)(unsafe.Pointer(h))
 
-	// 不支持文件夹
-	if fileNum := win.DragQueryFile(h2, 0xFFFFFFFF, nil, 0); fileNum > 1 {
+	// 获取文件地址 和文件数量
+	filePath, fileNum := w32.DragQueryFile(h2, 0)
+
+	// 不支持文件夹  文件数量不能大于1
+	if fileNum > 1 {
 		return nil, errors.New("当前不支持文件夹操作")
 	}
-
-	// 获取文件名长度
-	fileLen := win.DragQueryFile(h2, 0, &(filePath0[0]), 1000)
-	fileByte := Int16SliceToByte(filePath0[:fileLen])
-	// 获取文件名
-	filePath := string(fileByte)
 
 	// 获取上传服务器的文件名
 	fileNameSlice := strings.Split(filePath, "\\")
@@ -198,17 +209,11 @@ func ReadClipboardFile() (*FileInfo, error) {
 	}
 	// 关闭文件
 	defer file.Close()
+
 	data := new(bytes.Buffer)
 	log.Println("加载文件成功：" + filePath)
 	// 拷贝文件数据
 	io.Copy(data, file)
-
-	// 备用，便于以后上传文件夹使用
-	//fileNum := win.DragQueryFile(h2, 0xFFFFFFFF, nil, 0)
-	//var i uint = 0
-	//for ; i < fileNum; i++ {
-	//
-	//}
 
 	// 构造返回的文件数据
 	info := &FileInfo{Data: data, FileName: newFileName, Img: false}
@@ -233,6 +238,7 @@ func ImgCopy(det *io.Writer, src *bytes.Buffer) error {
 }
 
 // 把一个 uint16 类型的数组转成 byte 数组
+// 只适用于纯英文
 func Int16SliceToByte(intSlice []uint16) []byte {
 	j := 0
 	// 获取byte数组长度
@@ -244,6 +250,7 @@ func Int16SliceToByte(intSlice []uint16) []byte {
 		}
 		j++
 	}
+	// 设置指定长度的字符数组
 	var buf = make([]byte, j)
 	j = 0
 	for i := 0; i < len(intSlice); i++ {
@@ -257,17 +264,6 @@ func Int16SliceToByte(intSlice []uint16) []byte {
 		j++
 	}
 	return buf
-}
-
-// 把一个 byte 类型的数组转成 rune 数组
-func ByteSliceToRune(byteSlice []byte) []rune {
-	return []rune(string(byteSlice))
-}
-
-// 把一个 uint16 类型的数组转成 rune 数组
-func Int16SliceToRune(intSlice []uint16) []rune {
-	slice := Int16SliceToByte(intSlice)
-	return ByteSliceToRune(slice)
 }
 
 func int16ToBytes(i uint16) []byte {

@@ -5,9 +5,9 @@ import (
 	"github.com/go-toast/toast"
 	"github.com/go-vgo/robotgo"
 	"github.com/robotn/gohook"
+	"imgupload/clipboard"
 	"imgupload/conf/client"
 	"imgupload/util"
-	"imgupload/clipboard"
 	"io"
 	"log"
 	"mime/multipart"
@@ -54,20 +54,37 @@ func doUpload(group string) {
 	fileData, err := clipboard.ReadClipboard()
 	if err != nil {
 		showToast("图片上传失败")
+		log.Println(err)
 		return
 	}
-
+	// 声明 http 上传的数据
 	bodyBuf := &bytes.Buffer{}
 	bodyWriter := multipart.NewWriter(bodyBuf)
-	//关键的一步操作
-	fileWriter, err := bodyWriter.CreateFormFile("file", "file")
+
+	// 服务器文件路径
+	serverUrl := conf.ServerUrl
+	// 定义上传至服务器的 Writer
+	fileWriter := new(io.Writer)
+	// 判断上传的是文件还是截图
+	if fileData.Img {
+		// 上传的是截图
+		*fileWriter, err = bodyWriter.CreateFormFile("file", "file")
+		serverUrl += "/imgGo/upload"
+		// 将文件数据拷贝到fileWriter中
+		clipboard.ImgCopy(fileWriter, fileData.Data)
+	} else {
+		// 上传的额是文件
+		*fileWriter, err = bodyWriter.CreateFormFile("file", fileData.FileName)
+		serverUrl += "/imgGo/uploadFile"
+		io.Copy(*fileWriter, fileData.Data)
+	}
+	// 判断上面执行的代码是否有错误
 	if err != nil {
 		log.Println(err)
 		showToast("图片上传失败")
 		return
 	}
-	// 将文件数据拷贝到fileWriter中
-	clipboard.ImgCopy(&fileWriter, fileData)
+
 	bodyWriter.WriteField("group", group)
 
 	contentType := bodyWriter.FormDataContentType()
@@ -75,8 +92,8 @@ func doUpload(group string) {
 	bodyWriter.Close()
 	// 创建一个http客户端
 	uploadClient := http.Client{}
-	request, _ := http.NewRequest(http.MethodPost,
-		conf.ServerUrl+"/imgGo/upload", bodyBuf)
+	//向 request 设置服务器地址
+	request, _ := http.NewRequest(http.MethodPost, serverUrl, bodyBuf)
 	// 写入通行证
 	request.Header.Set("access", util.Sha2(conf.Auth))
 	request.Header.Set("Content-Type", contentType)
@@ -89,6 +106,7 @@ func doUpload(group string) {
 	}
 	defer resp.Body.Close()
 	var respBytes = &bytes.Buffer{}
+	// 从返回数据中解析文件名
 	io.Copy(respBytes,resp.Body)
 	if err != nil {
 		log.Println(err)
@@ -99,6 +117,7 @@ func doUpload(group string) {
 	// 向剪切板写入可访问文件路径
 	robotgo.WriteAll(conf.ServerUrl + respBytes.String())
 
+	// 告知用户上传成功
 	showToast(group + ": 图片上传成功")
 }
 

@@ -22,8 +22,10 @@ func main() {
 		return
 	}
 
-	// 图片新增接口
+	// 截图新增接口
 	http.HandleFunc("/imgGo/upload", handler.UploadHandler)
+	// 文件夹新增接口
+	http.HandleFunc("/imgGo/uploadFile", handler.UploadFileHandler)
 	// 剪裁图片接口
 	http.HandleFunc("/imgGo/thumb", handler.ThumbImgHandler)
 	// 图片删除接口

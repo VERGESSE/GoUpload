@@ -3,12 +3,8 @@
   "auth": "vergessen",
   "groups": [
     {
-      "groupName": "blog",
-      "shortcutKey": "ctrl+shift+z"
-    },
-    {
-      "groupName": "default",
-      "shortcutKey": "ctrl+shift+x"
+      "groupName": "test",
+      "shortcutKey": "ctrl+space"
     }
   ]
 }

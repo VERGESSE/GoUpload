@@ -1,12 +1,11 @@
 package main
 
 import (
-	"log"
-	"net/http"
-
 	"imgupload/conf/server"
 	"imgupload/handler"
 	"imgupload/util"
+	"log"
+	"net/http"
 )
 
 func main() {
@@ -16,11 +15,23 @@ func main() {
 
 	// 读取配置文件
 	conf := server.Conf
-	err := util.LoadConf("conf/server.json", conf)
+	const confFile = "conf/server.json"
+	err := util.LoadConf(confFile, conf)
 	if err != nil {
 		log.Println("Error: " , err)
 		return
 	}
+
+	// 设置文件监听器函数，配置文件修改时立即重新加载配置
+	go util.FileUpDateListener(confFile, func() {
+			// 重新加载配置文件
+			err := util.LoadConf(confFile, conf)
+			if err != nil {
+				log.Println("Error: " , err)
+				return
+			}
+			log.Println("服务端配置文件修改: ", confFile)
+		})
 
 	// 截图新增接口
 	http.HandleFunc("/imgGo/upload", handler.UploadHandler)

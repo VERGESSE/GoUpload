@@ -51,16 +51,18 @@ func main() {
 			showToast("新配置加载完成")
 			// 根据配置的组别重新启动程序
 			for _, groupInfo := range conf.Groups  {
+				groupKey := groupInfo.ShortcutKey
 				// 获取快捷键
 				keys := strings.Split(groupInfo.ShortcutKey, "+")
-				// 解除之前的修改的配置标记失效
-				oldGroup[groupInfo.GroupName + groupInfo.ShortcutKey] = false
 				groupName := groupInfo.GroupName
+				// 解除之前的修改的配置标记失效
+				oldGroup[groupName + groupKey] = false
+
 				// 设置指定文件名和快捷键的监听
 				robotgo.EventHook(hook.KeyDown, keys,
 					func(e hook.Event) {
 						// 启动文件上传程序
-						doUpload(groupName, groupInfo.ShortcutKey)
+						doUpload(groupName, groupKey)
 					})
 			}
 		})
@@ -68,14 +70,15 @@ func main() {
 	showToast("程序启动成功")
 	// 根据配置的组别启动程序
 	for _, groupInfo := range conf.Groups  {
+		groupKey := groupInfo.ShortcutKey
 		// 获取快捷键
-		keys := strings.Split(groupInfo.ShortcutKey, "+")
+		keys := strings.Split(groupKey, "+")
 		groupName := groupInfo.GroupName
 		// 设置指定文件名和快捷键的监听
 		robotgo.EventHook(hook.KeyDown, keys,
 			func(e hook.Event) {
 				// 启动文件上传程序
-				doUpload(groupName, groupInfo.ShortcutKey)
+				doUpload(groupName, groupKey)
 		})
 	}
 	log.Println("程序启动成功")

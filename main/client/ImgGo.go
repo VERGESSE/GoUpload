@@ -17,17 +17,53 @@ import (
 
 var conf = client.Conf
 
+// 存储已经失效的 groupName
+var oldGroup = make(map[string]bool, 10)
+
 func main() {
 
 	//设置log级别
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 
+	// 配置文件路径
+	confFile := "conf/client.json"
 	// 读取配置文件
-	err := util.LoadConf("conf/client.json", conf)
+	err := util.LoadConf(confFile, conf)
 	if err != nil {
 		log.Println("Error: " , err)
 		return
 	}
+
+	// 设置文件监听器函数，配置文件修改时立即重新加载配置
+	go util.FileUpDateListener(confFile, func() {
+
+			// 把旧的 Group 标记为失效
+			for _, groupInfo := range conf.Groups  {
+				oldGroup[groupInfo.GroupName + groupInfo.ShortcutKey] = true
+			}
+
+			// 重新加载配置文件
+			err := util.LoadConf(confFile, conf)
+			if err != nil {
+				log.Println("Error: " , err)
+				return
+			}
+			showToast("新配置加载完成")
+			// 根据配置的组别重新启动程序
+			for _, groupInfo := range conf.Groups  {
+				// 获取快捷键
+				keys := strings.Split(groupInfo.ShortcutKey, "+")
+				// 解除之前的修改的配置标记失效
+				oldGroup[groupInfo.GroupName + groupInfo.ShortcutKey] = false
+				groupName := groupInfo.GroupName
+				// 设置指定文件名和快捷键的监听
+				robotgo.EventHook(hook.KeyDown, keys,
+					func(e hook.Event) {
+						// 启动文件上传程序
+						doUpload(groupName, groupInfo.ShortcutKey)
+					})
+			}
+		})
 
 	showToast("程序启动成功")
 	// 根据配置的组别启动程序
@@ -39,7 +75,7 @@ func main() {
 		robotgo.EventHook(hook.KeyDown, keys,
 			func(e hook.Event) {
 				// 启动文件上传程序
-				doUpload(groupName)
+				doUpload(groupName, groupInfo.ShortcutKey)
 		})
 	}
 	log.Println("程序启动成功")
@@ -49,7 +85,12 @@ func main() {
 	showToast("程序退出！")
 }
 
-func doUpload(group string) {
+func doUpload(group, groupKey string) {
+	// 如果 Group 失效则不执行
+	if oldGroup[group + groupKey] {
+		return
+	}
+
 	// 获取剪切板中的图片数据
 	fileData, err := clipboard.ReadClipboard()
 	if err != nil {

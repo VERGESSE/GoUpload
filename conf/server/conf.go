@@ -4,7 +4,10 @@ var Conf = &Config{}
 
 // 配置文件结构体
 type Config struct {
-	Port     string
+	// 服务器 端口号
+	Port string
+	// 存储上传文件的地址
 	FilePath string
-	Auth     string
+	// 权限密码
+	Auth string
 }

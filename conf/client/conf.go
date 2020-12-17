@@ -6,7 +6,7 @@ var Conf = &Config{}
 type Config struct {
 	// 后端服务器地址
 	ServerUrl string
-	// 权限
+	// 权限密码
 	Auth string
 	// 分组
 	Groups []struct {

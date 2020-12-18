@@ -11,7 +11,15 @@ import (
 
 func main() {
 
-	logFile, _ := os.OpenFile("log/client.log",
+	logFileName := ""
+	// 判断是否传入日志文件名
+	if len(os.Args) == 1 {
+		logFileName = "log/server.log"
+	} else {
+		logFileName = os.Args[1]
+	}
+
+	logFile, _ := os.OpenFile(logFileName,
 		os.O_RDWR|os.O_CREATE|os.O_APPEND, 0766)
 	// 指定日志文件夹
 	log.SetOutput(logFile)

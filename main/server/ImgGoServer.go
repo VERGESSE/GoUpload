@@ -6,10 +6,15 @@ import (
 	"imgupload/util"
 	"log"
 	"net/http"
+	"os"
 )
 
 func main() {
 
+	logFile, _ := os.OpenFile("log/client.log",
+		os.O_RDWR|os.O_CREATE|os.O_APPEND, 0766)
+	// 指定日志文件夹
+	log.SetOutput(logFile)
 	//设置log级别
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 
